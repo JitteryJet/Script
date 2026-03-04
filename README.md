@@ -9,7 +9,7 @@ This is ugly (it perhaps should have been in the GameData folder) but it is unli
 the Developers will fix that now.
 
 The scripts may or may not work depending on a lot of factors. The scripts I featured
-on one of my YouTube videos is more likely to work.
+on one of my YouTube videos are more likely to work.
 
 The repository also contains a lot of garbage and test files, some of it interesting!
 
