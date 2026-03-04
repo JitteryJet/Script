@@ -1,0 +1,36 @@
+// CareerEp01.
+@lazyglobal off.
+
+sas on.
+stage.
+
+wait until ship:altitude > 70000+1000.
+
+GetCrewReport().
+ObserveMysteryGoo().
+
+stage.
+
+chutes on.
+
+function GetCrewReport
+  {
+// Collect Crew Report from a command pod.
+    local P TO SHIP:PARTSNAMED("mk1pod.v2")[0].
+    local M TO P:GETMODULE("ModuleScienceExperiment").
+    M:DEPLOY.
+    WAIT UNTIL M:HASDATA.
+  }
+
+function ObserveMysteryGoo
+  {
+// Observe the Mystery Goo science experiment.
+    local P1 TO SHIP:PARTSNAMED("GooExperiment")[0].
+    local P2 TO SHIP:PARTSNAMED("GooExperiment")[1].
+    local M1 TO P1:GETMODULE("ModuleScienceExperiment").
+    local M2 TO P2:GETMODULE("ModuleScienceExperiment").
+    M1:DEPLOY.
+    WAIT UNTIL M1:HASDATA.
+    M2:DEPLOY.
+    WAIT UNTIL M2:HASDATA.
+  }

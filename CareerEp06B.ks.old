@@ -1,0 +1,64 @@
+// CareerEp06B.
+@lazyglobal off.
+
+ExploreTheMun().
+
+local function ExploreTheMun
+  {
+// Contract to "Explore The Mun".
+    sas off.
+//    set ship:control:pilotmainthrottle to 0.
+    local PhaseAngle to 30.
+    local ThrottleSet to 0.
+    set target to mun.
+    set kuniverse:timewarp:rate to 100.
+// Wait for zenith. The Mun will pass overhead.
+    until vang(ship:up:forevector,target:position) < 1
+      {wait 0.}
+// Wait for post-Zenith phase angle.
+    until vang(ship:up:forevector,target:position) > PhaseAngle
+      {wait 0.}
+    kuniverse:timewarp:cancelwarp().
+    until kuniverse:timewarp:issettled
+      {wait 0.}
+    lock steering to lookdirup(ship:up:forevector,ship:facing:topvector).
+    lock throttle to ThrottleSet.
+    set ThrottleSet to 1.
+    SetStagingTrigger().
+    until ship:apoapsis > (target:altitude)
+      {wait 0.}
+    set ThrottleSet to 0.
+    set ship:control:pilotmainthrottle to 0.
+    print throttle.
+    print ship:control:pilotmainthrottle.
+  }
+
+local function DoScienceExperiments
+  {
+// Do Scientific Experiments on a vessel.
+    local ModuleList to ship:modulesnamed("ModuleScienceExperiment").
+    for module in ModuleList
+      {
+        module:deploy.
+        wait until module:hasdata.
+      }
+  }
+
+local function SetStagingTrigger
+  {
+// Automatically activate the next stage when the current stage
+// can no longer produce thrust or has ran out of fuel.
+    local lock FuelInStage to stage:liquidfuel+stage:solidfuel.
+    when
+      ship:maxthrust = 0
+      or FuelInStage = 0
+    then
+      {
+        stage.
+        until stage:ready {wait 0.}
+        if stage:number > 0
+          return true.
+        else
+          return false.
+      }
+  }

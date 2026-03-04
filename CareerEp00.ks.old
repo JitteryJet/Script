@@ -1,0 +1,8 @@
+// CareerEp00.
+
+// stage.
+// SET P TO SHIP:PARTSNAMED("GooExperiment")[1].
+SET P TO SHIP:PARTSNAMED("mk1pod.v2")[0].
+SET M TO P:GETMODULE("ModuleScienceExperiment").
+M:DEPLOY.
+WAIT UNTIL M:HASDATA.

@@ -1,0 +1,31 @@
+// CareerEp02.
+@lazyglobal off.
+sas on.
+
+EscapeTheAtmosphere().
+
+local function EscapeTheAtmosphere
+  {
+// Escape the atmosphere contract.
+    stage.
+
+    wait until ship:altitude > ship:body:atm:height.
+    wait 0.
+
+    DoScienceExperiments().
+
+    stage.
+    wait until stage:ready.
+    stage.
+  }
+
+local function DoScienceExperiments
+  {
+// Do Scientific Experiments on a vessel.
+    local ModuleList to ship:modulesnamed("ModuleScienceExperiment").
+    for module in ModuleList
+      {
+        module:deploy.
+        wait until module:hasdata.
+      }
+  }

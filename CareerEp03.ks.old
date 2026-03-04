@@ -1,0 +1,69 @@
+// CareerEp03.
+@lazyglobal off.
+sas off.
+set ship:control:pilotmainthrottle to 0.
+
+OrbitKerbin().
+
+local function OrbitKerbin
+  {
+// Orbit Kerbin Contract.
+    lock steering to ship:up.
+    lock throttle to 1.
+    if ship:status = "PRELAUNCH"
+    	stage.
+    SetStagingTrigger().
+    wait until alt:radar > 1000.
+    lock steering to heading(90,80,0).
+    wait 10.
+    lock steering to ship:velocity:surface.
+    lock throttle to min(1,20000/ship:altitude).
+    wait until ship:altitude > 30000.
+    lock steering to heading(90,0,0).
+    wait until ship:apoapsis > 80000.
+    lock throttle to 0.
+    DoScienceExperiments().
+  }
+
+local function EscapeTheAtmosphere
+  {
+// Escape the atmosphere contract.
+    stage.
+
+    wait until ship:altitude > ship:body:atm:height.
+    wait 0.
+
+    DoScienceExperiments().
+
+    stage.
+    wait until stage:ready.
+    stage.
+  }
+
+local function DoScienceExperiments
+  {
+// Do Scientific Experiments on a vessel.
+    local ModuleList to ship:modulesnamed("ModuleScienceExperiment").
+    for module in ModuleList
+      {
+        module:deploy.
+        wait until module:hasdata.
+      }
+  }
+
+local function SetStagingTrigger
+  {
+// Stage automatically the stage when it can no longer produce thrust.
+    when
+      ship:maxthrust = 0
+      or stage:liquidfuel = 0
+    then
+      {
+        stage.
+        until stage:ready {wait 0.}
+        if stage:number > 0
+          return true.
+        else
+          return false.
+      }
+  }

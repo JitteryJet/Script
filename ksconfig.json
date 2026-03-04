@@ -1,0 +1,6 @@
+{
+  "linting":
+  {
+    "symbol-unused-locally": "info"
+  }
+}
