@@ -1,7 +1,7 @@
 // Name: LambertSolverFunctions
 // Author: JitteryJet
-// Version: V02
-// kOS Version: 1.4.0.0
+// Version: V03
+// kOS Version: 1.5.1.0
 // KSP Version: 1.12.5
 // Description:
 //    Lambert Solver functions.
@@ -11,7 +11,6 @@
 //      "AEE462 Lecture 10 - A Bisection Algorithm for the Solution of Lambert's Equation"
 //      by M Peet, YouTube channel "Cybernetic Systems and Controls".
 //    - Handles "Short Way" and "Long Way" single-revolution elliptical orbits.
-//    - Does not handle parabolic and hyperbolic orbits.
 //    - Abbreviations used in the orbital calculations (they are reasonably common):
 //        a is the semi-major axis.
 //        e is eccentricity.
@@ -32,21 +31,23 @@
 // Update History:
 //    30/05/2023 V01  - Created.
 //    01/12/2023 V02  - Added "Long Way" transfer orbits.
-//    18/03/2025 V03  - WIP. Add "Long Way" adjustment to
+//    25/03/2026 V03  - WIP. Added "Long Way" adjustment to
 //                      CalcTransferArrVelLambertVec.
+//                    - Changed MiscFunctions V05 to V06.
 //                    -
 //
 @lazyglobal off.
 // Load in functions from the library.
-runoncepath("MiscFunctions V05").
+runoncepath("MiscFunctions V06").
+
 // Log file for debugging.
 local LogFilename to kuniverse:realtime:tostring+".txt".
-//
+
 global function CalcTransferTimeLambert
   {
 // Calculate the transfer time (TOF).
 // Notes:
-//    - Uses the Langrange form of Lambert's Equation.
+//    - Uses the modern Lagrange form of Lambert's Equation.
 //    - The code is written as a series of steps to make it
 //      easier to understand and debug.
 //    - 
@@ -57,58 +58,40 @@ global function CalcTransferTimeLambert
     parameter c.              // Chord Point1-Point2.
     parameter a.              // Semi-major axis.
     parameter mu.             // Standard Gravitational Parameter of central body.
-    parameter TransAng.       // Angle to use between Point1 and Point2 - there are two.
+    parameter TransferAng.    // Angle to use between Point1 and Point2 - there are two.
     parameter ShortWayOrbit.  // True - Short Way orbit. False - Long Way orbit.
 
 // Semi-perimeter.
     local s to (r1+r2+c)/2.
 
-    local AlphaDeg to 0.      // Alpha term in equation.
-    local AlphaRad to 0.
-    local BetaDeg to 0.       // Beta term in equation.
-    local BetaRad to 0.
-    local OrbitalPeriod to 0.
-    local tTransfer to 0.
+    local AlphaDeg to 0.0.      // Alpha term in equation.
+    local AlphaRad to 0.0.
+    local BetaDeg to 0.0.       // Beta term in equation.
+    local BetaRad to 0.0.
+    local tTransfer to 0.0.
 
 // Temporary fix to get around the value passed to arcsin going
 // out of range. The reason is unknown.
-    if sqrt(s/(2*a)) > 1
-      set AlphaDeg to 2*arcsin(1).
-    else
-      set AlphaDeg to 2*arcsin(sqrt(s/(2*a))).
+//    if sqrt(s/(2*a)) > 1
+//      set AlphaDeg to 2*arcsin(1).
+//    else
+
+// Set the alpha term of the equation.
+// The equation has "short way" and "long way" solutions.
+    set AlphaDeg to 2*arcsin(sqrt(s/(2*a))).
+    if not ShortWayOrbit
+      set AlphaDeg to 360-AlphaDeg.
     set AlphaRad to AlphaDeg*constant:DegToRad.
+
+// Set the beta term of the equation.
+// The equation has angle > pi and angle < pi solutions.
     set BetaDeg to 2*arcsin(sqrt((s-c)/(2*a))).
+    if TransferAng > 180
+      set BetaDeg to -BetaDeg.
     set BetaRad to BetaDeg*constant:DegToRad.
 
-    set OrbitalPeriod to 2*constant:pi*sqrt(a^3/mu).
-
-    if ShortWayOrbit
-      {
-        if TransAng < 180
-          {
-            set tTransfer to
-              sqrt(a^3/mu)*((AlphaRad-sin(AlphaDeg))-(BetaRad-sin(BetaDeg))).
-          }
-        else
-          {
-           set tTransfer to
-              OrbitalPeriod-sqrt(a^3/mu)*((AlphaRad-sin(AlphaDeg))-(BetaRad-sin(BetaDeg))).
-          }
-      }
-    else
-      {
-        if TransAng < 180
-          {
-            set tTransfer to
-              OrbitalPeriod-sqrt(a^3/mu)*((AlphaRad-sin(AlphaDeg))+(BetaRad-sin(BetaDeg))).
-          }
-        else
-          {
-            set tTransfer to
-              sqrt(a^3/mu)*((AlphaRad-sin(AlphaDeg))+(BetaRad-sin(BetaDeg))).
-          }
-      }
-
+// Calculate the transfer time.
+    set tTransfer to sqrt(a^3/mu)*(AlphaRad-sin(AlphaDeg)-(BetaRad-sin(BetaDeg))).
     return timespan(0,0,0,0,tTransfer).
   }
 
@@ -128,17 +111,17 @@ global function CalcSMALambert
     parameter r2.             // Orbit radius at Point2.
     parameter c.              // Chord Point1-Point2.
     parameter mu.             // Standard Gravitational Parameter of central body.
-    parameter TransAng.       // Angle to use between Point1 and Point2 - there are two.
+    parameter TransferAng.    // Angle between Point1 and Point2.
 
 // Bisection Algorithm stopping criteria.
     local TolerancePct to 0.1.
     local tToleranceTSpan to t*TolerancePct/100.
 
-    local a to 0.             // Semi-major axis (SMA).
+    local a to 0.0.           // Semi-major axis (SMA).
     local s to                // Semi-perimeter.
       (r1+r2+c)/2.
-    local amin to 0.          // Bisection minimum a.
-    local amax to 0.          // Bisection maximum a.
+    local amin to 0.0.        // Bisection minimum a.
+    local amax to 0.0.        // Bisection maximum a.
     local aMinSOETrans to     // SMA that gives the minimum Specific Orbital Energy
       (r1+r2+c)/4.            // for the possible transfer orbits.
 
@@ -146,29 +129,28 @@ global function CalcSMALambert
     local tcalc to 0.
 
     local ShortWayOrbit to
-      t < CalcTransferTimeLambert(r1,r2,c,aMinSOETrans,mu,TransAng,true).
+      t < CalcTransferTimeLambert(r1,r2,c,aMinSOETrans,mu,TransferAng,true).
 
-// Initial guess of SMA.
+// Initial guess of SMA range to search.
     set amin to s/2.
     set amax to 2*s.
 
 // Adjust initial amax guess if it isn't high enough.
-    set tcalc to CalcTransferTimeLambert(r1,r2,c,amax,mu,TransAng,ShortWayOrbit).
+    set tcalc to CalcTransferTimeLambert(r1,r2,c,amax,mu,TransferAng,ShortWayOrbit).
     if ShortWayOrbit
       {
         until tcalc < t
           {
             set amax to 2*amax.
-            set tcalc to CalcTransferTimeLambert(r1,r2,c,amax,mu,TransAng,true).
+            set tcalc to CalcTransferTimeLambert(r1,r2,c,amax,mu,TransferAng,true).
           }
-
       }
     else
       {
         until tcalc > t
           {
             set amax to 2*amax.
-            set tcalc to CalcTransferTimeLambert(r1,r2,c,amax,mu,TransAng,false).
+            set tcalc to CalcTransferTimeLambert(r1,r2,c,amax,mu,TransferAng,false).
           }
       }
 
@@ -176,7 +158,7 @@ global function CalcSMALambert
     until finished
       {
         set a to (amin+amax)/2.
-        set tcalc to CalcTransferTimeLambert(r1,r2,c,a,mu,TransAng,ShortWayOrbit).
+        set tcalc to CalcTransferTimeLambert(r1,r2,c,a,mu,TransferAng,ShortWayOrbit).
         set finished to NearEqual(t:seconds,tcalc:seconds,ttoleranceTSpan:seconds).
         if finished
           break.
@@ -203,7 +185,7 @@ global function CalcTransferDepVelLambertVec
 // Calculate the velocity of the transfer orbit at
 // the departure point.
 // Notes:
-//    - Uses the Langrange form of Lambert's Equation.
+//    - Uses the modern Lagrange form of Lambert's Equation.
 //    - The code is written as a series of steps to make it
 //      easier to understand and debug.
 // Todo:
@@ -231,10 +213,10 @@ global function CalcTransferDepVelLambertVec
 
 // Temporary fix to get around the value passed to arcsin going
 // out of range. The reason is unknown.
-    if sqrt(s/(2*a)) > 1
-      set AlphaDeg to 2*arcsin(1).
-    else
-      set AlphaDeg to 2*arcsin(sqrt(s/(2*a))).
+//    if sqrt(s/(2*a)) > 1
+//      set AlphaDeg to 2*arcsin(1).
+//    else
+    set AlphaDeg to 2*arcsin(sqrt(s/(2*a))).
 
     if TransAng < 180
       set BetaDeg to 2*arcsin(sqrt((s-c)/(2*a))).
@@ -247,10 +229,7 @@ global function CalcTransferDepVelLambertVec
     local ACap to sqrt(mu/(4*a))*CalcCot(AlphaDeg/2).
     local BCap to sqrt(mu/(4*a))*CalcCot(BetaDeg/2).
 
-    if ShortWayOrbit
-      set vTransferVec to (BCap+ACap)*cVec:normalized+(BCap-ACap)*r1Vec:normalized.
-    else
-      set vTransferVec to (BCap+ACap)*cVec:normalized+(BCap-ACap)*r1Vec:normalized.
+    set vTransferVec to (BCap+ACap)*cVec:normalized+(BCap-ACap)*r1Vec:normalized.
 
     return vTransferVec.
   }
@@ -260,19 +239,18 @@ global function CalcTransferArrVelLambertVec
 // Calculate the velocity of the transfer orbit at
 // the arrival point.
 // Notes:
-//    - Uses the Langrange form of Lambert's Equation.
+//    - Uses the modern Lagrange form of Lambert's Equation.
 //    - The code is written as a series of steps to make it
 //      easier to understand and debug.
 //    - 
 // Todo:
-//    - I think this needs more work (add "Long Way" orbits etc).
-//      I likely never tested it.
+//    - 
 //    -
     parameter r1Vec.                // Departure point position vector.
     parameter r2Vec.                // Arrival point position vector.
     parameter a.                    // Semi-major axis.
     parameter mu.                   // Standard Gravitational Parameter.
-    parameter TransferAng.          // Angle to use between Point1 and Point2 - there are two.
+    parameter TransferAng.          // Angle between Point1 and Point2.
     parameter ShortWayOrbit.        // True - Short Way orbit. False - Long Way orbit.
 //
 // Cord vector.
@@ -326,7 +304,7 @@ global function CalcParabolicTransferTimeLambert
     parameter r2.       // Orbit radius at Point2.
     parameter c.        // Chord Point1-Point2.
     parameter mu.       // Standard Gravitational Parameter of central body.
-    parameter TransAng. // Angle to use between Point1 and Point2 - there are two.
+    parameter TransAng. // Angle between Point1 and Point2.
 
 // Semi-perimeter.
     local s to (r1+r2+c)/2.

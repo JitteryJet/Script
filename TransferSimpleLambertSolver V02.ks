@@ -4,32 +4,32 @@
 // kOS Version: 1.5.1.0
 // KSP Version: 1.12.5
 // Description:
-//    Transfer the ship from it's current orbit to
-//    another orbital sharing the same central body.
+//    Transfer a ship in orbit to a target orbital
+//    in the same SOI by using a Simple Lambert Solver.
 //
 // Assumptions:
 //    - No staging is required.
+//    - The orbital is a body or ship.
+//    - The target orbital is in the same SOI as the ship.
 //    - The departure and arrival orbits are prograde (anticlockwise)
 //      defined by north being up. The code MIGHT work with 
 //      retrograde orbits but is untested.
 //    - 
 //
 // Notes:
-//    - This script finds a transfer orbit using a simple Lambert's Solver.
-//      "Short Way" elliptical transfer orbits only.
+//    - This script finds a transfer orbit by using a Simple Lambert Solver.
 //
-//    - The departure and arrival orbits must share the same central
-//      body (ie be in the same SOI). These transfers are handled:
+//    - These transfers are handled:
 //
-//        - Transfer to the arrival body with a flyby or a capture.
-//        - Transfer to the arrival ship with a flyby.
+//        - Transfer to the target body with a flyby or a capture.
+//        - Transfer to the target ship with a flyby.
 //
 //    - Lots of orbits to keep track of:
-//        Departure             - Ship's current orbit.
-//        Arrival               - Orbit of the body or ship arrived at.
-//        Capture               - Ship's orbit after capture at the arrival body.
-//        Hyperbolic Arrival    - Ship's orbit after encountering the SOI of the arrival body.
-//        Transfer              - Ship's transfer orbit to the arrival body or ship.      
+//        Departure             - The orbit of the ship.
+//        Arrival               - Orbit of the target body or ship.
+//        Capture               - The orbit of the ship after capture at the arrival body.
+//        Hyperbolic Arrival    - The orbit of the ship after encountering the SOI of the arrival body.
+//        Transfer              - Transfer orbit to the target body or ship.      
 //
 //    - Abbreviations used in the orbital calculations (they are reasonably common):
 //        a is the semi-major axis.
@@ -44,13 +44,7 @@
 //        t is time.
 //        v is speed. 
 //
-//    - The algorithm is based mostly on the YouTube video series 
-//      "AEE462 Lecture 10 - A Bisection Algorithm for the Solution of Lambert's Equation"
-//      by M Peet, YouTube channel "Cybernetic Systems and Controls".  
-//
 // Todo:
-//    - Replace internal functions with calls to my LambertSolverFunctions
-//      library - the library includes "Long Way" elliptical transfer orbits.
 //    - Add staging.
 //    - Add code to terminate the program if another body interfers
 //      with the transfer (yes I am looking at you, Mun).
@@ -59,20 +53,27 @@
 //      Benchmark change in performance to ensure it is worth doing.
 //    - Have another look at how a safe periapsis height is guaranteed
 //      at the end of the transfer orbit. Periapsis as a parameter?
-//      Ignore Lambert's Solver solutions where the ship will crash
+//      Ignore Lambert Solver solutions where the ship will crash
 //      into the arrival body? Formula to calculate the velocity change
 //      required to adjust the periapsis during a hyperbolic encounter? 
 //    -
 //
 // Update History:
 //    15/07/2022 V01  - Created.
-//    03/01/2026 V02  - WIP.
+//    27/03/2026 V02  - WIP.
 //                    - Updates for the Artemis 2 simulation.
 //                    - Changed Delta-vFunctions V03 to V05.
 //                    - Changed MiscFunctions V04 to V06.
-//                    - Fixed up some bug with the PHYSICS time warping???
 //                    - Replaced the local version of DoSafeWait with the
 //                      version in the MiscFunctions library.
+//                    - Added LambertSolverFunctions V03.
+//                    - Replaced inline Lambert Solver Function code with
+//                      Lambert Solver Function library calls.
+//                    - Replaced orbit search step time parameter with number of steps.
+//                    - Added ASAP search type.
+//                    - Removed warping to the target SOI from flyby arrival action.
+//                    - Added target orbital offset duration.
+//                    -
 //
 @lazyglobal off.
 // Increase IPU value to speed up scripts with a lot of calculations
@@ -83,8 +84,14 @@ set config:ipu to 2000.
 // Parameter descriptions.        
 //    OrbitalName             Name of the target orbital.
 //    ArrivalAction           Action at arrival "CAPTURE" or "FLYBY".
-//    SearchType              Search type "LOWESTDV" or "LOWESTTIME".
-//    SearchStepSize          Step size to use in search (s).   
+//    SearchType              Search type for departure time and transfer time:
+//                              "LOWESTDV"      - Lowest transfer delta-v
+//                              "LOWESTTIME"    - Lowest transfer time
+//                              "NOW"           - Lowest transfer delta-v from current departure time
+//                                                plus one step (to allow for search time).
+//    OrbitSearchSteps        Number of steps to use when searching the orbits.
+//    OrbitOffsetDuration     Leading (-ve) or trailing (+ve) target position offset (s).
+//                            This is to allow a flyby to miss the target orbital.
 //    SteeringDuration        Time to allow the vessel to steer to the burn
 //                            attitude for the maneuver (s).                            
 //	  WarpType	  					  "PHYSICS","RAILS" or "NOWARP".
@@ -94,25 +101,31 @@ set config:ipu to 2000.
 parameter OrbitalName to "".
 parameter ArrivalAction to "CAPTURE".
 parameter SearchType to "LOWESTDV".
-parameter SearchStepSize to 600.
+parameter OrbitSearchSteps to 100.
+parameter OrbitOffsetDuration to 0.0.
 parameter SteeringDuration to 60.0.
 parameter WarpType to "RAILS".
 parameter ShowArrows to "NOSHOW".
 
+// Adjust parameters if required.
+set OrbitSearchSteps to floor(OrbitSearchSteps).
+
 // Load in library functions.
-runoncepath("TransferSimpleLambertSolverMFD V01").
+runoncepath("TransferSimpleLambertSolverMFD V02").
 runoncepath("Delta-vFunctions V05").
-runoncepath("MiscFunctions V06").
+runoncepath("OrbitFunctions V04").
+runoncepath("LambertSolverFunctions V03").
 
 local NextMFDRefreshTime to timestamp(0.0).
-local ArrivalOrbital to 0.
+local ArrivalOrbital to ship.
 local ManeuverStartTStmp to timestamp(0.0).
 local ManeuverVec to 0.
 local FatalError to false.
 local MFDRefreshTriggerActive to true.
 local MFDRefreshInterval to 0.1.
 local VeryBigNumber to 3.402823E+38.
-local SteeringTSpan to timespan(0.0,0.0,0.0,0.0,SteeringDuration).
+local tSteeringTSpan to timespan(0.0,0.0,0.0,0.0,SteeringDuration).
+local tOrbitOffsetTSpan to timespan(0.0,0.0,0.0,0.0,OrbitOffsetDuration).
 
 // Minimum height above the atmosphere (or sea level for airless)
 // where an orbit is considered safe.
@@ -125,12 +138,13 @@ local SafeOrbitAlt to 0.
 local lock ShipPositionVec to ship:position-ship:body:position.
 local lock ShipObtNormalVec to vcrs(ShipPositionVec,ship:velocity:obt).
 
-local tDepTStmp to time(0).
-local tTransTSpan to timespan(0).
+local tDepTStmp to timestamp(0.0).
+local tTransTSpan to timespan(0.0).
 local aFinalTrans to 0.
 local vFinalTransDv to 999999.
-local tFinalTransTSpan to timespan(99999,0).
+local tFinalTransTSpan to timespan(99999.0,0.0).
 local tFinalDepTStmp to timestamp().
+local FinalShortWayOrbit to false.
 
 // Log file for debugging.
 local LogFilename to kuniverse:realtime:tostring+".txt".
@@ -139,8 +153,6 @@ local DepartureArrow to
   vecdraw(V(0,0,0),V(0,0,0),red,"Departure Position",1,false,0.1,true,true).
 local ArrivalArrow to
   vecdraw(V(0,0,0),V(0,0,0),green,"Arrival Position",1,false,0.1,true,true).
-//local VacantFocusArrow to
-//  vecdraw(V(0,0,0),V(0,0,0),yellow,"Vacant Focus",1,false,0.1,true,true).
 
 sas off.
 set ship:control:mainthrottle to 0.
@@ -151,7 +163,7 @@ CheckForErrorsAndWarnings().
 if not FatalError
   {
     SearchForTransfer().
-    StartTransfer().
+    DoTransfer().
     HandleArrival().
   }
 MFDFunctions["DisplayFlightStatus"]("Finished").
@@ -159,44 +171,38 @@ RemoveLocksAndTriggers().
 
 local function SearchForTransfer
   {
-// Search combinations of departure times and transfer times for
-// a suitable transfer orbit.
+// Search for a transfer orbit.
 // Notes:
-//    - Search for "Short Way" elliptical transfer orbits only.
-//      This simplifies the code. But it will miss other optimal solutions.
-//    - The minimum transfer time defines the parabolic transfer orbit
-//      solution: times greater than this give elliptical transfer orbits.
-//    - The maximum transfer time defines the upper limit for the
-//      "Short Way" solutions, transfer times longer than this
-//      are "Long Way" solutions.
+//    - Uses a Lambert Solver to generate candidate transfer orbits
+//      based on departure times and transfer times.
+//    - The orbits are filtered based on various criteria.
 //    -
 // Todo:
 //    - Think some more about how far into the future to search for
 //      solutions.
-//    - Cater for "Long Way" solutions.
 //    -
 
     MFDFunctions["DisplayFlightStatus"]("Solution search").
 
-    local tDepFromTStmp to timestamp()+300.
-    local tDepToTStmp to tDepFromTStmp+ship:obt:period.
-    local tTransToTSpan to ArrivalOrbital:obt:period.
+    local tDepStepTSpan to timespan(0.0,0.0,0.0,0.0,ship:obt:period/OrbitSearchSteps).
+    local tArrStepTSpan to timespan(0.0,0.0,0.0,0.0,ArrivalOrbital:obt:period/OrbitSearchSteps).
 
     local r1 to 0.                          // Orbit radius of Point1.
     local r2 to 0.                          // Orbit radius of Point2.
     local c to 0.                           // Chord Point1-Point2.
     local mu to 0.                          // Standard Gravitational Parameter
     local aTrans to 0.                      // SMA of transfer orbit.
-    local tMinTransTSpan to timespan(0).    // Minimum transfer time (TOF). Defines the parabolic solution.
-    local tMaxTransTSpan to timespan(0).    // Maximum transfer time (TOF).
+    local tMinTransTSpan to timespan(0.0).  // Minimum transfer time (TOF). Defines the parabolic solution.
+    local tShortWayMaxTSpan to              // Short Way maxiumum transfer time.
+      timespan(0.0).
     local aMinSOETrans to 0.                // Minimum energy transfer semi-major axis.
-    local vDeltaVec to 0.
+    local vDeltaVec to v(0,0,0).
+    local TransferAng to 0.0.               // Transfer orbit angle.
+    local ShortWayOrbit to false.           // Short Way orbit or Long Way orbit.
 
-// Always recalculate the position vectors just prior to being used,
-// the position vector origin and axes of the central body moves in real time
-// in the KSP coordinate space.
-    local r1Vec to 0.
-    local r2Vec to 0.
+    local r1Vec to v(0,0,0).
+    local r2Vec to v(0,0,0).
+    local FinishDepLoop to false.
 
     set mu to ship:body:mu.
     if ShowArrows = "SHOW"
@@ -205,26 +211,46 @@ local function SearchForTransfer
         set ArrivalArrow:show to true.
       }
 
-    set tDepTStmp to tDepFromTStmp.
-
-    until tDepTStmp > tDepToTStmp
+    set tDepTStmp to timestamp()+tDepStepTSpan.
+    from {local DepStep to 1.}
+    until DepStep = OrbitSearchSteps or FinishDepLoop
+    step
       {
-        set tTransTSpan to timespan(0).
-        until tTransTSpan > tTransToTSpan
+        set DepStep to DepStep+1.
+        set tDepTStmp to tDepTStmp+tDepStepTSpan.
+      }
+    do
+      {
+        set tTransTSpan to timespan(0.0).
+        from {local ArrStep to 1.}
+        until ArrStep > OrbitSearchSteps
+        step
+          {
+            set ArrStep to ArrStep+1.
+            set tTransTSpan to tTransTSpan+tArrStepTSpan.
+          }
+        do
           { 
-            if tDepTStmp < time()
+            if tDepTStmp < timestamp()
               {
-                MFDFunctions["DisplayError"]("Cannot search in the past. Search is too slow.").
+                MFDFunctions["DisplayError"]("Departure in the past. Transfer orbit search is too slow.").
                 print 0/0.
               }
             set r1Vec to positionat(ship,tDepTStmp)-ship:body:position.
-            set r2Vec to positionat(ArrivalOrbital,tDepTStmp+tTransTSpan)-ship:body:position.
+            set r2Vec to
+              positionat(ArrivalOrbital,tDepTStmp+tTransTSpan+tOrbitOffsetTSpan)-ship:body:position.
             set r1 to r1Vec:mag.
             set r2 to r2Vec:mag.
             set c to (r2Vec-r1Vec):mag.
+            set TransferAng to CalcAngleBetweenPositionVecs(r1Vec,r2Vec).
             set aMinSOETrans to (r1+r2+c)/4.
-            set tMinTransTSpan to CalcParabolicTransferTime(r1,r2,c,mu).
-            set tMaxTransTSpan to CalcTransferTimeLamberts(r1,r2,c,aMinSOETrans,mu).
+            set tMinTransTSpan to CalcParabolicTransferTimeLambert(r1,r2,c,mu,TransferAng).
+            set tShortWayMaxTSpan to
+                CalcTransferTimeLambert(r1,r2,c,aMinSOETrans,mu,TransferAng,true).
+            if tTransTSpan < tShortWayMaxTSpan
+              set ShortWayOrbit to true.
+            else
+              set ShortWayOrbit to false.
             if ShowArrows = "SHOW"
               {
                 set DepartureArrow:start to ship:body:position.
@@ -235,16 +261,19 @@ local function SearchForTransfer
             if SearchType = "LOWESTTIME"
               {
                 if tTransTSpan > tMinTransTSpan
-                  and tTransTSpan < tMaxTransTSpan
                   {
                     if tTransTSpan < tFinalTransTSpan
                       {
                         set tFinalDepTStmp to tDepTStmp.
                         set tFinalTransTSpan to tTransTSpan.
-                        set aFinalTrans to CalcSMALamberts(tFinalTransTSpan,r1,r2,c,mu).
+                        set aFinalTrans to
+                          CalcSMALambert(tFinalTransTSpan,r1,r2,c,mu,TransferAng).
                         set vDeltaVec to
-                          CalcTransfervVec(r1Vec,r2Vec,aFinalTrans,mu)-velocityat(ship,tDepTStmp):orbit.
+                          CalcTransferDepVelLambertVec
+                            (r1Vec,r2Vec,aFinalTrans,mu,TransferAng,ShortWayOrbit)
+                              -velocityat(ship,tDepTStmp):orbit.
                         set vFinalTransDv to vDeltaVec:mag.
+                        set FinalShortWayOrbit to ShortWayOrbit.
                       }
                   }
               }
@@ -252,27 +281,45 @@ local function SearchForTransfer
             if SearchType = "LOWESTDV"
               {
                 if tTransTSpan > tMinTransTSpan
-                  and tTransTSpan < tMaxTransTSpan
                   {
-                    set aTrans to CalcSMALamberts(tTransTSpan,r1,r2,c,mu).
+                    set aTrans to CalcSMALambert(tTransTSpan,r1,r2,c,mu,TransferAng).
                     set vDeltaVec to
-                      CalcTransfervVec(r1Vec,r2Vec,aTrans,mu)-velocityat(ship,tDepTStmp):orbit.
+                      CalcTransferDepVelLambertVec
+                        (r1Vec,r2Vec,aTrans,mu,TransferAng,ShortWayOrbit)-velocityat(ship,tDepTStmp):orbit.
                     if vDeltaVec:mag < vFinalTransDv
                       {
                         set vFinalTransDv to vDeltaVec:mag.
                         set aFinalTrans to aTrans.
                         set tFinalDepTStmp to tDepTStmp.
                         set tFinalTransTSpan to tTransTSpan.
+                        set FinalShortWayOrbit to ShortWayOrbit.
                       }
                   }
               }
-            set tTransTSpan to tTransTSpan+SearchStepSize.
+            if SearchType = "NOW"
+              {
+                if tTransTSpan > tMinTransTSpan
+                  {
+                    set aTrans to CalcSMALambert(tTransTSpan,r1,r2,c,mu,TransferAng).
+                    set vDeltaVec to
+                      CalcTransferDepVelLambertVec
+                        (r1Vec,r2Vec,aTrans,mu,TransferAng,ShortWayOrbit)-velocityat(ship,tDepTStmp):orbit.
+                    if vDeltaVec:mag < vFinalTransDv
+                      {
+                        set vFinalTransDv to vDeltaVec:mag.
+                        set aFinalTrans to aTrans.
+                        set tFinalDepTStmp to tDepTStmp.
+                        set tFinalTransTSpan to tTransTSpan.
+                        set FinalShortWayOrbit to ShortWayOrbit.
+                      }
+                    set FinishDepLoop to true.
+                  }
+              }
           }
-        set tDepTStmp to TDepTStmp+SearchStepSize.
       }
     MFDFunctions["DisplaySearchResults"]
       (
-        tFinalDepTStmp-timestamp(),
+        tFinalDepTStmp,
         tFinalTransTSpan,
         aFinalTrans,
         vFinalTransDv
@@ -281,182 +328,9 @@ local function SearchForTransfer
     set ArrivalArrow:show to false.
   }
 
-local function CalcSMALamberts
+local function DoTransfer
   {
-// Calculate the semi-major axis given a transfer time using Lambert's Equation.
-// Notes:
-//    - Uses the Bisection algorithm.
-//    - Elliptical orbits only.
-//    - "Short Way" solutions only.
-//    - This is only a simple implemetation of a Lambert Solver,
-//      it will probably fail in complex situations?
-//    - 
-// Todo:
-//    - It probably is not too much work to extend this algorithm
-//      to handle "Long Way" solutions as well.
-//    -     
-
-    parameter t.        // Transfer time (TOF) from Point1 to Point2.
-    parameter r1.       // Orbit radius at Point1.
-    parameter r2.       // Orbit radius at Point2.
-    parameter c.        // Chord Point1-Point2.
-    parameter mu.       // Standard Gravitational Parameter of central body.
-
-// Bisection Algorithm stopping criteria.
-    local TolerancePct to 0.1.
-    local tToleranceTSpan to t*TolerancePct/100.
-
-    local a to 0.       // Semi-major axis.
-    local s to          // Semi-perimeter.
-      (r1+r2+c)/2.
-    local amin to 0.    // Bisection minimum a.
-    local amax to 0.    // Bisection maximum a.
-
-    local finished to false.
-    local tcalc to 0.
-
-// Initial guess.
-    set amin to s/2.
-    set amax to 2*s.
-
-// Adjust initial amax guess if it isn't high enough.
-    set tcalc to CalcTransferTimeLamberts(r1,r2,c,amax,mu).
-    until tcalc < t
-      {
-        set amax to amax*2.
-        set tcalc to CalcTransferTimeLamberts(r1,r2,c,amax,mu).
-      }
-
-// Find the semi-major axis for the given transfer time.
-    set finished to false.
-    until finished
-      {
-        set a to (amax+amin)/2.
-        set tcalc to CalcTransferTimeLamberts(r1,r2,c,a,mu).
-        if tcalc > t
-          set amin to a.
-        else
-          set amax to a.
-        set finished to NearEqual(t:seconds,tcalc:seconds,ttoleranceTSpan:seconds).
-      }
-    return a.
-  }
-
-local function CalcTransferTimeLamberts
-  {
-// Calculate transfer time using Lambert's Equation.
-// Notes:
-//    - Uses the "modern formulation"? of Lambert's Equation
-//      copied verbatim from various sources.
-//    - Only works for elliptical orbit transfers ie not
-//      parabolic or hyperbolic.
-//    - The code is written as a series of steps to make it
-//      easier to understand and debug.
-//    - 
-// Todo:
-//    -
-
-    parameter r1.       // Orbit radius at Point1.
-    parameter r2.       // Orbit radius at Point2.
-    parameter c.        // Chord Point1-Point2.
-    parameter a.        // Semi-major axis.
-    parameter mu.       // Standard Gravitational Parameter of central body.
-
-// Semi-perimeter.
-    local s to (r1+r2+c)/2.
-
-// What I call the "alpha" and "beta" terms in the equation.
-// I don't know why they break it down like this, except maybe
-// to put it into a "form" similiar to Kepler's Equation.
-    local AlphaDeg to 2*arcsin(sqrt(s/(2*a))).
-    local AlphaRad to AlphaDeg*constant:DegToRad.
-    local BetaDeg to 2*arcsin(sqrt((s-c)/(2*a))).
-    local BetaRad to BetaDeg*constant:DegToRad.
-
-// Transfer time.
-    local t to
-      sqrt(a^3/mu)*(AlphaRad-BetaRad-(sin(AlphaDeg)-sin(BetaDeg))).
-
-    return timespan(0,0,0,0,t).
-  }
-
-local function CalcParabolicTransferTime
-  {
-// Calculate the parabolic transfer time.
-// Notes:
-//    - The parabolic solution defines the minimum transfer
-//      time. For an elliptical orbit solution,
-//      the transfer time has to be greater than this.
-//    - Another way of looking at it is a parabolic
-//      solution has an SMA value that approaches infinity.
-//      Solutions close to the parabolic solution will
-//      also have large SMA values.
-//    -
-// Todo:
-//    -
-
-    parameter r1.       // Orbit radius at Point1.
-    parameter r2.       // Orbit radius at Point2.
-    parameter c.        // Chord Point1-Point2.
-    parameter mu.       // Standard Gravitational Parameter of central body.
-
-// Semi-perimeter.
-    local s to (r1+r2+c)/2.
-
-    local tparabolic to
-      (sqrt(2)/3)*sqrt(s^3/mu)*(1-((s-c)/s)^1.5).
-
-    return timespan(0,0,0,0,tparabolic).
-  }
-
-local function CalcTransfervVec
-  {
-// Calculate the velocity of the transfer orbit at
-// the departure point.
-// Notes:
-//    - This works because the departure(r1) and arrival(r2)
-//      position vectors define the orbital plane for the transfer orbit.
-//    - Once the velocity at the departure point is know, the vector for
-//      maneuver can be calculated.
-//    - The velocity at the arrival point can also be calculated using
-//      a similiar equation.
-//    - 
-// Todo:
-//    - 
-//    -
-
-    parameter r1Vec.
-    parameter r2Vec.
-    parameter a.
-    parameter mu.
-
-// Cord vector.
-    local cVec to r2Vec-r1Vec.
-
-// Cord.
-    local c to cVec:mag.
-
-// Semi-perimeter.
-    local s to (r1Vec:mag+r2Vec:mag+c)/2.
-
-// The same alpha and beta parameters used in
-// Lambert's Equation.
-    local AlphaDeg to 2*arcsin(sqrt(s/(2*a))).
-    local BetaDeg to 2*arcsin(sqrt((s-c)/(2*a))).
-
-// A and B are also parameters (I guess).
-    local ACap to sqrt(mu/(4*a))*CalcCot(AlphaDeg/2).
-    local BCap to sqrt(mu/(4*a))*CalcCot(BetaDeg/2).
-
-    local TransfervVec to
-      (BCap+ACap)*cVec:normalized+(BCap-ACap)*r1Vec:normalized.
-
-    return TransfervVec.
-  }
-
-local function StartTransfer
-  {
-// Start the transfer at the departure time.
+// Do the transfer at the departure time.
 // Notes:
 //    - 
 // Todo:
@@ -466,6 +340,9 @@ local function StartTransfer
     local SteeringDir to 0.
     local ManeuverSecs to 0.
     local SteeringStartTStmp to 0.
+    local r1Vec to v(0,0,0).
+    local r2Vec to v(0,0,0).
+    local TransferAng to 0.0.
 
     set ManeuverSecs to
       DeltavEstBurnTime
@@ -477,21 +354,25 @@ local function StartTransfer
         ).
 
     set ManeuverStartTStmp to tFinalDepTStmp-ManeuverSecs/2.
-    set SteeringStartTStmp to ManeuverStartTStmp-SteeringTSpan.
+    set SteeringStartTStmp to ManeuverStartTStmp-tSteeringTSpan.
     MFDFunctions["DisplayManuever"](ManeuverSecs,vFinalTransDv).
 
     MFDFunctions["DisplayFlightStatus"]("Departure wait").
     DoSafeWait(SteeringStartTStmp,WarpType).
 
-// Recalculate the delta-v vector for the maneuver as the origin and axes
-// of the central body would have moved by now.
+    set r1Vec to positionat(ship,tFinalDepTStmp)-ship:body:position.
+    set r2Vec to
+      positionat(ArrivalOrbital,tFinalDepTStmp+tFinalTransTSpan+tOrbitOffsetTSpan)-ship:body:position.
+    set TransferAng to CalcAngleBetweenPositionVecs(r1Vec,r2Vec).
     set ManeuverVec to
-      CalcTransfervVec
+      CalcTransferDepVelLambertVec
         (
-          positionat(ship,tFinalDepTStmp)-ship:body:position,
-          positionat(ArrivalOrbital,tFinalDepTStmp+tFinalTransTSpan)-ship:body:position,
+          r1Vec,
+          r2Vec,
           aFinalTrans,
-          ship:body:mu
+          ship:body:mu,
+          TransferAng,
+          FinalShortWayOrbit
         )
       -velocityat(ship,tFinalDepTStmp):orbit.
 
@@ -513,7 +394,7 @@ local function StartTransfer
     wait until timestamp() > ManeuverStartTStmp+ManeuverSecs.
     set ThrottleSet to 0.
     MFDFunctions["DisplayFlightStatus"]("Transfering").
-    set ManeuverStartTStmp to timestamp(0).
+    set ManeuverStartTStmp to timestamp(0.0).
     MFDFunctions["DisplayManuever"](0,0).
 
 // Wait to allow throttle down to complete.
@@ -551,16 +432,14 @@ local function HandleArrival
       }
     else
       set ArrivalTStmp to tFinalDepTStmp+tFinalTransTSpan.
-    DoSafeWait(ArrivalTStmp,WarpType).
-
+    
     if SOIEncounter
       {
-// Ensure the transition to the SOI has occurred.
-// The wait may have stopped just short of the SOI edge.
-        wait until ship:obt:transition <> "ENCOUNTER".
         if ArrivalAction = "CAPTURE"
           and ship:body:name = ArrivalOrbital:name
           {
+            DoSafeWait(ArrivalTStmp,WarpType).
+            wait until ship:obt:transition <> "ENCOUNTER".
             if ship:obt:periapsis < SafeOrbitAlt
               DoAdjustPeManeuver().
             DoCaptureManeuver().
@@ -595,7 +474,7 @@ local function DoAdjustPeManeuver
 
     MFDFunctions["DisplayFlightstatus"]("Steering").
 
-    set SteeringEndTStmp to timestamp()+SteeringTSpan.
+    set SteeringEndTStmp to timestamp()+tSteeringTSpan.
     lock steering to RadialOutVec.
     wait until timestamp() > SteeringEndTStmp.
 
@@ -660,12 +539,12 @@ local function DoCaptureManeuver
           ISPVesselStage(0)
         ).
     set ManeuverStartTstmp to ManeuverPointTstmp-ManeuverSecs/2.
-    set SteeringStartTStmp to ManeuverStartTStmp-SteeringTSpan.
+    set SteeringStartTStmp to ManeuverStartTStmp-tSteeringTSpan.
     MFDFunctions["DisplayFlightStatus"]("Capture wait").
     MFDFunctions["DisplayManuever"](ManeuverSecs,vDeltav).
 
 // Check to see if there is enough time to do the burn.
-    if timestamp() > (ManeuverStartTstmp-SteeringDuration)
+    if timestamp() > (ManeuverStartTstmp-tSteeringTSpan)
       {
         MFDFunctions["DisplayError"]("Not enough time for capture burn").
         print 0/0.
@@ -732,7 +611,7 @@ local function SetMFDRefreshTrigger
           ship:obt:apoapsis,
           ship:obt:periapsis,
           ship:obt:eccentricity,
-          SearchStepSize,
+          OrbitSearchSteps,
           tDepTStmp,
           tTransTSpan,
           ManeuverStartTStmp,
@@ -784,6 +663,7 @@ local function CheckForErrorsAndWarnings
     else
     if SearchType <> "LOWESTDV"
       and SearchType <> "LOWESTTIME"
+      and SearchType <> "NOW"
       {
         MFDFunctions["DisplayError"]("Search Type is unknown").
         set FatalError to true.
@@ -791,7 +671,7 @@ local function CheckForErrorsAndWarnings
     else
     if ship:body:name <> ArrivalOrbital:body:name
       {
-        MFDFunctions["DisplayError"]("Departure and arrival must be in same SOI").
+        MFDFunctions["DisplayError"]("Target orbital must be in same SOI").
         set FatalError to true.
       }
     else
@@ -805,6 +685,11 @@ local function CheckForErrorsAndWarnings
     if OrbitalName = ship:ShipName
       {
         MFDFunctions["DisplayError"]("Target orbital name same as this vessel").
+        set FatalError to true.
+      }
+    if OrbitSearchSteps < 1
+      {
+        MFDFunctions["DisplayError"]("Orbital search steps must be 0 or more").
         set FatalError to true.
       }
   }
@@ -840,18 +725,6 @@ local function RemoveLocksAndTriggers
 // One more physics tick before finishing this script,
 // just to be on the safe side.
     wait 0.
-  }
-
-local function CalcCot
-  {
-// Cotangent function input degrees.
-
-    parameter angle.
-
-//    local cotx to cos(angle)/sin(angle).
-    local cotx to 1/tan(angle).
-
-    return cotx. 
   }
 
 local function CreateNodeFromVec

@@ -11,6 +11,9 @@
 //      Fuel, thrust limiting, staging and action groups have to match the
 //      parameters of the script.
 //    - The spacecraft starts from the KSC launchpad.
+//    - A lot of things are tuned/tweaked for a particular game save I used for testing.
+//      Be prepared to tweak some things here and there to match another game save.
+//      Be prepared to pick the correct launch days and launch window.
 //    -
 //
 // Artemis 2 Flight Plan from NASA news conferences and other doco as of 23/09/2025.
@@ -53,7 +56,7 @@
 //  ??:??:??:??                                 Lunar flyby correction burn.
 //                                              Retrograde orbit.
 //  ??:??:??:??   5000nmi       926km           Lunar flyby (perilune 5000-9000nmi).
-//  ??:??:??:??                 40km            Perigee lowering at apogee.
+//  ??:??:??:??                 40km            Perigee lowering.
 //  ??:??:??:??                                 CM separation.
 //                                              Atmospheric entry.
 //
@@ -61,7 +64,7 @@
 //    -
 //
 // Update History:
-//    12/01/2026 V01  - WIP.
+//    27/03/2026 V01  - WIP.
 //                    - Created.
 //                    -
 
@@ -98,7 +101,6 @@ runpath
   ).
 
 // ICPS separation.
-clearscreen.
 core:part:getmodule("kOSProcessor"):doevent("Close Terminal").
 wait 5.
 hudtext("ICPS separation",HudtextDelay,HudtextStyle,HudtextFontSize,white,false).
@@ -121,7 +123,6 @@ hudtext("Deploy solar array",HudtextDelay,HudtextStyle,HudtextFontSize,white,fal
 panels on.
 
 // ICPS periapsis raise.
-clearscreen.
 wait until ship:altitude>ship:body:atm:height.
 hudtext("ICPS periapsis raise",HudtextDelay,HudtextStyle,HudtextFontSize,white,false).
 rcs on.
@@ -138,7 +139,6 @@ rcs off.
 
 // ICPS apoapsis raise.
 wait 1. // Workaround for phantom acceleration warping bug.
-clearscreen.
 hudtext("ICPS apoapsis raise",HudtextDelay,HudtextStyle,HudtextFontSize,white,false).
 rcs on.
 core:part:getmodule("kOSProcessor"):doevent("Open Terminal").
@@ -161,7 +161,6 @@ rcs off.
 // orbit upsets the space-dolphins.
 
 wait 1. // Workaround for phantom acceleration warping bug.
-clearscreen.
 core:part:getmodule("kOSProcessor"):doevent("Close Terminal").
 hudtext("ICPS periapsis lowering",HudtextDelay,HudtextStyle,HudtextFontSize,white,false).
 DoSafeWait(timestamp()+3600,WarpType).
@@ -200,10 +199,9 @@ unlock throttle.
 
 // ESM periapsis raise.
 wait 5.
-clearscreen.
-core:part:getmodule("kOSProcessor"):doevent("Open Terminal").
 hudtext("ESM periapsis raise",HudtextDelay,HudtextStyle,HudtextFontSize,white,false).
 rcs on.
+core:part:getmodule("kOSProcessor"):doevent("Open Terminal").
 runpath
   (
     "ChangeOrbitApsides V01",
@@ -213,10 +211,13 @@ runpath
 	  WarpType          // Warp type (NOWARP,RAILS,PHYSICS).
   ).
 rcs off.
+wait 1. // Workaround for phantom acceleration warping bug.
+core:part:getmodule("kOSProcessor"):doevent("Close Terminal").
 
 // Trans Munar Injection (TMI) calculation, burn and transfer to Mun SOI.
+kuniverse:pause().
+DoSafeWait(timestamp()+eta:periapsis-504,WarpType).
 hudtext("Trans Munar Injection",HudtextDelay,HudtextStyle,HudtextFontSize,white,false).
-clearscreen.
 core:part:getmodule("kOSProcessor"):doevent("Open Terminal").
 rcs on.
 runpath
@@ -224,19 +225,23 @@ runpath
     "TransferSimpleLambertSolver V02",
     "Mun",
     "FLYBY",
-    "LOWESTDV",
-    300,
-    ESMSteeringSecs,
+    "NOW",
+    50,
+    -7200,
+    15,
     WarpType,
-    "SHOW"
+    "NOSHOW"
   ).
 rcs off.
-//kuniverse:pause().
+wait 1. // Workaround for phantom acceleration warping bug.
+core:part:getmodule("kOSProcessor"):doevent("Close Terminal").
+
+// Wait until the Mun SOI.
+DoSafeWait(timestamp()+eta:transition,WarpType).
+wait until ship:obt:transition <> "ENCOUNTER".
 
 // Mun flyby correction burn.
 hudtext("Mun flyby correction burn",HudtextDelay,HudtextStyle,HudtextFontSize,white,false).
-clearscreen.
-core:part:getmodule("kOSProcessor"):doevent("Close Terminal").
 rcs on.
 DoPeAdjustmentRadial(926E3,"RETROGRADE",ESMSteeringSecs).
 rcs off.

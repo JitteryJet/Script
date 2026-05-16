@@ -65,8 +65,7 @@
 //                    - Added Linear-tangent Steering (LTS) turn.
 //                    - Changed zero-lift gravity turn to take into account
 //                      the Drag Sensible Atmosphere limit.
-//    02/01/2026 V07  - WIP
-//                    - Add temporary Artemis 2 code.
+//    15/05/2026 V07  - Add temporary Artemis 2 code.
 //                    - Fix up time warp.
 //                    - Improved the accuracy of the circularization maneuver.
 //                    -
@@ -209,10 +208,10 @@ local function Launch
     legs off.
     MFDFunctions["DisplayFlightStatus"]("Launch").
     wait until (ship:altitude-LaunchAltitude >= TurnStartAltitude).
-    MFDFunctions["DisplayFlightStatus"]("Roll").
+//    MFDFunctions["DisplayFlightStatus"]("Roll").
 // Artemis 2 roll.
-    set SteeringDir to heading(90,90,LaunchAzimuth+90).
-    wait 10. // Adjust roll time depending on how long it takes.
+//    set SteeringDir to heading(90,90,LaunchAzimuth+90).
+//    wait 10. // Adjust roll time depending on how long it takes.
   }
         
 local function ZeroLiftTurn
@@ -232,11 +231,11 @@ local function ZeroLiftTurn
 // Artemis 2 code start. Comment out when not in use.
 // The Service Module fairing is assumed to have this
 // stage number.
-    local FairingStageNumber to 6.
-    local FairingJettisoned to false.
-    local ClockStarted to false.
-    local StartTime to 0.
-
+//    local FairingStageNumber to 6.
+//    local FairingJettisoned to false.
+//    local ClockStarted to false.
+//    local StartTime to 0.
+//
 // Artemis 2 code end.
 
     if TurnPitchoverAngle > 0
@@ -250,13 +249,13 @@ local function ZeroLiftTurn
         else
           {
 // Artemis 2 code start. Comment out when not in use.
-            if not FairingJettisoned
-              {
-                AG1 on.  // Jettison ECM fairing.
-                wait 5.
-                AG2 on.  // Jettison Launch Abort System.
-                set FairingJettisoned to true.
-              }
+//            if not FairingJettisoned
+//              {
+//                AG1 on.  // Jettison ECM fairing.
+//                wait 5.
+//                AG2 on.  // Jettison Launch Abort System.
+//               set FairingJettisoned to true.
+//              }
 // Artemis 2 code end.
             set SteeringDir to lookDirUp(ship:velocity:orbit,ship:facing:topvector).
           }
@@ -386,9 +385,9 @@ local function Pitchover
     until PitchoverAng > TurnPitchoverAngle
       {
         set SteeringDir to
-//          lookdirup(heading(LaunchAzimuth,90-PitchoverAng):forevector,ship:facing:topvector).
+          lookdirup(heading(LaunchAzimuth,90-PitchoverAng):forevector,ship:facing:topvector).
 // Artemis 2 roll.
-          lookdirup(heading(LaunchAzimuth,90-PitchoverAng):forevector,-ship:up:forevector).
+//          lookdirup(heading(LaunchAzimuth,90-PitchoverAng):forevector,-ship:up:forevector).
         set PitchoverAng to TurnPitchoverRate*(timestamp()-PitchStart):seconds.
       }
 
