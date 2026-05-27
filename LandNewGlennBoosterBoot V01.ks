@@ -35,10 +35,10 @@ local Barge01Geo to latlng(-0.173253,-60.851403).
 runpath
   (
     "LandNewGlennBooster V01",
-    Barge01Geo,                       // Landing spot.
+    CoveLaunchSiteGeo,                // Landing spot.
     2.2,                              // Aim Height (km).
     100,                              // Landing height (m).
     3,                                // Landing speed (m/s).
-    "RAILS",                          // Warp type (NOWARP,RAILS,PHYSICS).
+    "NOWARP",                          // Warp type (NOWARP,RAILS,PHYSICS).
     "SHOW"                            // Show arrows (SHOW,NOSHOW).
   ).

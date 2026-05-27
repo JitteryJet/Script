@@ -35,11 +35,11 @@ runpath
   (
     "LaunchToOrbit V07.ks",
     138,                  // Orbital altitude (km).
-    0.0,                  // Orbital inclination (degrees).
+    45.0,                  // Orbital inclination (degrees).
     "NORTH",              // Launch direction.
     "ZEROLIFT",           // Launch turn type "ZEROLIFT","LTS". 
-    2500,                 // Turn start altitude (m).
-    5,                    // Turn pitchover (degrees).
+    10000,                 // Turn start altitude (m).
+    0,                    // Turn pitchover (degrees).
     0.5,                  // Turn pitchover rate (degrees/s)
     0,                    // Linear-tangent Steering turn final angle (deg)
     0,                    // Linear-tangent Steering turn duration (s). 

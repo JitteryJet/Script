@@ -18,13 +18,13 @@
 //                    - Added Woomerang Launch Site.
 //                    - Added Dessert Launch Site.
 //                    - Fixed coords for KSC Launchpad.
-//    10/05/2026 V04  - WIP
-//                    - Fixed some coordinates.
+//    10/05/2026 V04  - Fixed some coordinates.
 //                    - Added KSC Runway.
 //                    - Added KSC Crawlerway.
 //                    - Added KSC VAB Pod Memorial.
 //                    - Added KSC Flag Pole.
 //                    - Added Cove Launch Site.
+//    26/05/2026      - Fixed some typos.
 //                    -
 
 global LatLngZeroGeo to latlng(0,0).
@@ -42,9 +42,9 @@ global IslandAirfieldGeo to latlng(-1.529275,-71.885308).
 global IslandAirfieldTowerGeo to latlng(-1.5233,-71.9111).
 global OsealisIslandGeo to latlng(5.857452,-62.562608).
 global TutUnJebAhnGeo to latlng(-6.4966,-141.6676).
-global WoomerangLaunchSite to latlng(45.289619,136.109985).
-global DessertLaunchSite to latlng(-6.560383,-143.950016).
-global CoveLaunchSite to latlng(3.747657,-72.213260).
+global WoomerangLaunchSiteGeo to latlng(45.289619,136.109985).
+global DessertLaunchSiteGeo to latlng(-6.560383,-143.950016).
+global CoveLaunchSiteGeo to latlng(3.747657,-72.213260).
 global NeilArmstrongMemorialGeo to latlng(0.7032,22.7469).
 global MunSouthCraterGeo to latlng(-11,80).
 global MunArch1Geo to latlng(12.4495,39.1930).
