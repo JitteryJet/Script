@@ -28,11 +28,10 @@
 //    -
 //
 // Todo:
-//    - Finalize script.
 //    -
 //
 // Update History:
-//    11/06/2026 V01  - Created. WIP.
+//    11/06/2026 V01  - Created.
 //                    -
 //
 @lazyglobal off.
