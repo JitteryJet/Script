@@ -14,10 +14,10 @@
 //    -
 //
 // Todo:
-//    - Finalise this script.
+//    -
 //
 // Update History:
-//    12/06/2026 V01  - Created. Wip.
+//    14/06/2026 V01  - Created.
 //                    -
 //
 @lazyglobal off.
@@ -27,5 +27,10 @@ wait until ship:unpacked.
 if ship:status = "PRELAUNCH"
   {
     core:part:getmodule("kOSProcessor"):doevent("Open Terminal").
-    runpath("archive:/KSP RP-1 kOS Firstplay/LaunchHappySnappyV01 V01").
+    runpath
+      (
+        "archive:/KSP RP-1 kOS Firstplay/LaunchHappySnappyV01 V01",
+        270.0,
+        0.2
+      ).
   }

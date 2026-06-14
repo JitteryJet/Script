@@ -1,23 +1,20 @@
-// Name: Multistage01Boot
+// Name: MousePlagueV02Boot
 // Author: JitteryJet
 // Version: V01
 // kOS Version: 1.6.0.1
 // KSP Version: 1.12.5
 // Description:
-//    Boot script for the Multistage 01 rocket
+//    Boot script for the Mouse Plague V02 sounding rocket.
 //
 // Assumptions:
-//    - The command pod in the last stage
-//      of the rocket runs this script.
-//      This ensure the correct stage is in game focus
-//      after staging. 
+//    - 
 //
 // Notes:
 //    - This script has to be located in the archive:/boot directory.
 //    -
 //
 // Todo:
-//    -
+//    - 
 //
 // Update History:
 //    14/06/2026 V01  - Created.
@@ -30,5 +27,10 @@ wait until ship:unpacked.
 if ship:status = "PRELAUNCH"
   {
     core:part:getmodule("kOSProcessor"):doevent("Open Terminal").
-    runpath("archive:/KSP RP-1 kOS Firstplay/LaunchMultistage01 V01").
+    runpath
+      (
+        "archive:/KSP RP-1 kOS Firstplay/LaunchMousePlagueV02 V01",
+        270.0,
+        10.0
+      ).
   }
