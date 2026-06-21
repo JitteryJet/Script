@@ -17,8 +17,6 @@
 //    - 
 //
 // Notes:
-//    - The fairing does not have to be jettisoned for
-//      the Film Camera to work.
 //    -
 //
 // Todo:

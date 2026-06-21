@@ -1,10 +1,10 @@
-// Name: HappySnappyV02Boot
+// Name: ForScienceV01Boot
 // Author: JitteryJet
 // Version: V01
 // kOS Version: 1.6.0.1
 // KSP Version: 1.12.5
 // Description:
-//    Boot script for the Happy Snappy V02 sounding rocket.
+//    Boot script for the For Science V01 sounding rocket.
 //
 // Assumptions:
 //    - 
@@ -18,7 +18,7 @@
 //    -
 //
 // Update History:
-//    20/06/2026 V01  - Created. WIP
+//    21/06/2026 V01  - Created. WIP
 //                    -
 //
 @lazyglobal off.
@@ -30,8 +30,8 @@ if ship:status = "PRELAUNCH"
     core:part:getmodule("kOSProcessor"):doevent("Open Terminal").
     runpath
       (
-        "archive:/KSP RP-1 kOS Firstplay/LaunchHappySnappyV02 V01",
-        90.0,
-        12.5
+        "archive:/KSP RP-1 kOS Firstplay/LaunchForScienceV01 V01",
+        0.0,
+        0.0
       ).
   }
