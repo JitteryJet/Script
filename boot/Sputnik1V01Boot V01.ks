@@ -4,13 +4,18 @@
 // kOS Version: 1.6.0.1
 // KSP Version: 1.12.5
 // Description:
-//    Boot script for the Sputnik 1 rocket.
+//    Boot script for the Sputnik 1 satellite.
 //
 // Assumptions:
-//    - 
+//    - The satellite is attached to the launch vessel at liftoff.
+//    - The vessel name of the satellite is not the same as the
+//      vessel name of the launch vehicle.
+//    -
 //
 // Notes:
 //    - This script has to be located in the archive:/boot directory.
+//    - This script will start running when the launch vehicle and satellite
+//      are spawned on the launchpad.
 //    -
 //
 // Todo:
@@ -18,21 +23,32 @@
 //    -
 //
 // Update History:
-//    22/06/2026 V01  - Created. WIP
+//    24/06/2026 V01  - Created. WIP
 //                    -
 //
 @lazyglobal off.
 wait until ship:unpacked.
 
-// First launch of the rocket from a launchpad.
-if ship:status = "PRELAUNCH"
+local ShipName2 to ship:name.
+
+// Wait until stage separation.
+wait until ship:name<>ShipName2.
+
+// Make the satellite the active vessel.
+// Wait a second or two to allow the
+// staging on the launch vehicle to complete.
+// Staging acts weird when you swap active vessels.
+wait 1.
+set kuniverse:activevessel to ship.
+
+// Only run the program once after stage separation.
+if ship:status = "FLYING"
+  or ship:status = "SUB_ORBITAL"
+  or ship:status = "ORBITING"
   {
     core:part:getmodule("kOSProcessor"):doevent("Open Terminal").
-    runpath
+    runoncepath
       (
-        "archive:/KSP RP-1 kOS Firstplay/LaunchSputnik1V01 V01",
-        90.0,
-        5.0,
-        75.0
+        "archive:/KSP RP-1 kOS Firstplay/FlySputnik1V01 V01"
       ).
   }

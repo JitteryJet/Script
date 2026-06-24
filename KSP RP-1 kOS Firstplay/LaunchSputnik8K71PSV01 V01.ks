@@ -1,10 +1,10 @@
-// Name: LaunchSputnik1V01
+// Name: LaunchSputnik8K71PSV01
 // Author: JitteryJet
 // Version: V01
 // kOS Version: 1.6.0.1
 // KSP Version: 1.12.5
 // Description:
-//    Launch the For Sputnik1 V01 rocket.
+//    Launch the Sputnik 8K71PS launch vehicle with attached satellite.
 //
 // Assumptions:
 //    - Body is Earth.
@@ -13,7 +13,7 @@
 //      - Stage 2:  Launch Tower de-clamping.
 //      - Stage 1:  Fairing jettison.
 //      - Stage 0:  Satellite separation.
-//    - 
+//    - The satellite is called "Sputnik 1".  
 //
 // Notes:
 //    -
@@ -23,7 +23,7 @@
 //    -
 //
 // Update History:
-//    22/06/2026 V01  - Created. WIP.
+//    24/06/2026 V01  - Created. WIP.
 //                    -
 //
 @lazyglobal off.
@@ -47,7 +47,7 @@ rcs off.
 clearscreen.
 
 // Launch confirmation.
-print "Program function: Sputnik 1".
+print "Program function: Launch Sputnik 8K71PS".
 print "Ship name: "+ship:name.
 print "Launch heading: "+round(PitchOverHeading,1)+char(176)
   +"  "+"Pitch over: "+round(PitchOverAngle,1)+char(176).
@@ -76,24 +76,23 @@ wait until stage:ready.
 
 // Launch straight up with roll.
 print "Roll program".
-//lock steering to lookdirup(ship:up:forevector,ship:facing:topvector).
 lock steering to heading(PitchOverHeading,90).
 wait until ship:verticalspeed>PitchOverVerticalSpeed.
 
 // Pitch over.
 print "Pitch program".
 lock steering to heading(PitchOverHeading,90-PitchOverAngle).
-wait until vang(ship:up:forevector,srfPrograde:forevector)>=PitchOverAngle.
+wait until vang(ship:up:forevector,ship:velocity:surface)>=PitchOverAngle.
 
 // Zero lift Gravity turn.
 print "Zero-lift gravity turn".
 lock steering to
   heading(PitchOverHeading,90-vang(ship:up:forevector,ship:velocity:surface)).
 wait until ship:thrust=0.0.
-//print "Coasting".
+print "MECO".
 
-// Wait until apogee is reached.
-//wait until ship:altitude>ship:obt:apoapsis-100.
+// Delay after MECO.
+wait 20.
 
 // Fairing jettison.
 print "Jettison fairing".
@@ -109,4 +108,4 @@ wait until stage:ready.
 set ship:control:pilotmainthrottle to 0.0.
 unlock steering.
 
-print "Launch completed".
+print "Program completed".
