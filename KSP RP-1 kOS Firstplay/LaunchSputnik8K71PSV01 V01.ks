@@ -16,14 +16,15 @@
 //      - Stage 0:  Satellite separation.
 //
 // Notes:
+//    - The launch vehicle does not roll very well, so
+//      the Roll Program has been removed.
 //    -
 //
 // Todo:
-//    - Finalise script.
 //    -
 //
 // Update History:
-//    25/06/2026 V01  - Created. WIP.
+//    28/06/2026 V01  - Created.
 //                    -
 //
 @lazyglobal off.
@@ -79,18 +80,19 @@ print "De-clamp".
 stage.
 wait until stage:ready.
 
-// Launch straight up with roll.
-print "Roll program".
-lock steering to heading(PitchOverHeading,90).
+// Launch straight up.
+print "Vertical ascent".
+lock steering to lookdirup(ship:up:forevector,ship:facing:topvector).
 wait until ship:verticalspeed>PitchOverVerticalSpeed.
 
 // Pitch over.
 print "Pitch program".
 lock steering to heading(PitchOverHeading,90-PitchOverAngle).
-// Should wait until pitch over is completed????
+wait until vang(ship:up:forevector,ship:facing:forevector)>PitchOverAngle*0.90.
 wait until vang(ship:up:forevector,ship:velocity:surface)>PitchOverAngle.
 
-// Zero lift Gravity turn.
+// Zero lift Gravity turn. Low AOA.
+// Lock to the heading and the surface prograde.
 print "Zero-lift gravity turn".
 lock steering to
   heading(PitchOverHeading,90-vang(ship:up:forevector,ship:velocity:surface)).
@@ -98,20 +100,21 @@ lock steering to
 // Booster separation.
 wait until BoosterFlameout(BoosterEngineName).
 print "BECO".
+wait 0.25.
 print "Booster separation".
 stage.
 wait until stage:ready.
 wait 1.
 
-// Wait until Karman Line is reached.
+// Karman Line.
 wait until ship:altitude>KarmanLineHeight.
 print "Karman Line".
-//lock steering to heading(PitchOverHeading,0).
+lock steering to ship:velocity:orbit.
 
-// Wait until TOA.
+// Top of Atmosphere (TOA).
 wait until ship:altitude>ship:body:atm:height.
 print "TOA".
-lock steering to heading(PitchOverHeading,0).
+//lock steering to heading(PitchOverHeading,0).
 
 // MECO
 wait until ship:thrust=0.0.
