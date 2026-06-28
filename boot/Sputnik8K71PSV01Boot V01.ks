@@ -18,7 +18,7 @@
 //    -
 //
 // Update History:
-//    24/06/2026 V01  - Created. WIP
+//    26/06/2026 V01  - Created. WIP
 //                    -
 //
 @lazyglobal off.
@@ -32,7 +32,7 @@ if ship:status = "PRELAUNCH"
       (
         "archive:/KSP RP-1 kOS Firstplay/LaunchSputnik8K71PSV01 V01",
         90.0,
-        5.0,
-        75.0
+        10.0,
+        59.0
       ).
   }

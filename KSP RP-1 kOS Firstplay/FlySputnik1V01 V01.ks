@@ -18,7 +18,7 @@
 //    -
 //
 // Update History:
-//    24/06/2026 V01  - Created. WIP.
+//    25/06/2026 V01  - Created. WIP.
 //                    -
 //
 @lazyglobal off.
@@ -34,7 +34,7 @@ set v0:attack to 0.0.
 set v0:decay to 0.0.
 set v0:sustain to 1.0.
 set v0:release to 0.0.
-local note0 to note(1000.0,99).
+local note0 to note(1000.0,1).
 
 sas off.
 rcs off.

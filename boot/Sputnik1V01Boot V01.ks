@@ -23,7 +23,7 @@
 //    -
 //
 // Update History:
-//    24/06/2026 V01  - Created. WIP
+//    25/06/2026 V01  - Created. WIP
 //                    -
 //
 @lazyglobal off.
@@ -34,11 +34,11 @@ local ShipName2 to ship:name.
 // Wait until stage separation.
 wait until ship:name<>ShipName2.
 
-// Make the satellite the active vessel.
-// Wait a second or two to allow the
-// staging on the launch vehicle to complete.
-// Staging acts weird when you swap active vessels.
-wait 1.
+// Wait for the launch vehicle to complete
+// it stage separation before switching the game focus
+// to the satellite. There is only one staging
+// stack per game and the in-focus vessel owns it.
+wait 2.
 set kuniverse:activevessel to ship.
 
 // Only run the program once after stage separation.
