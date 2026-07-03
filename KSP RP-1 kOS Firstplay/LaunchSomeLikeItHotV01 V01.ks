@@ -1,19 +1,21 @@
-// Name: LaunchSputnik8K71PSV01
+// Name: LaunchSomeLikeItHotV04
 // Author: JitteryJet
 // Version: V01
 // kOS Version: 1.6.0.1
 // KSP Version: 1.12.5
 // Description:
-//    Launch the Sputnik 8K71PS launch vehicle with attached satellite.
+//    Launch the Some Like It Hot V01 launch vehicle.
 //
 // Assumptions:
 //    - Body is Earth.
+//    - The sustainer has enough delta-v to leave the atmosphere.
 //    - Staging Stack setup:
-//      - Stage 4:  Engine ignition.
-//      - Stage 3:  Launch Tower de-clamping.
-//      - Stage 2:  Booster separation.
-//      - Stage 1:  Fairing jettison.
-//      - Stage 0:  Satellite separation.
+//      - Stage 5:  Engine ignition.
+//      - Stage 4:  Launch Tower de-clamping.
+//      - Stage 3:  Booster separation.
+//      - Stage 2:  Fairing jettison.
+//      - Stage 1:  Payload separation.
+//      - Stage 0:  Parachute arming.
 //
 // Notes:
 //    - The launch vehicle does not roll very well, so
@@ -24,7 +26,7 @@
 //    -
 //
 // Update History:
-//    28/06/2026 V01  - Created.
+//    02/07/2026 V01  - Created.
 //                    -
 //
 @lazyglobal off.
@@ -54,7 +56,7 @@ rcs off.
 clearscreen.
 
 // Launch confirmation.
-print "Program function: Launch Sputnik 8K71PS".
+print "Program function: Launch Some Like It Hot V01".
 print "Ship name: "+ship:name.
 print "Launch heading: "+round(PitchOverHeading,2)+char(176)
   +"  "+"Pitch over: "+round(PitchOverAngle,2)+char(176).
@@ -111,26 +113,25 @@ wait until ship:altitude>KarmanLineHeight.
 print "Karman Line".
 lock steering to ship:velocity:orbit.
 
-// Top of Atmosphere (TOA).
-wait until ship:altitude>ship:body:atm:height.
-print "TOA".
-//lock steering to heading(PitchOverHeading,0).
-
-// MECO
-wait until ship:thrust=0.0.
-print "MECO".
-
-// Delay after MECO.
-wait 20.
-
 // Fairing jettison.
 print "Jettison fairing".
 stage.
 wait until stage:ready.
 
-// Satellite separation.
-wait 1.
-print "Satellite separation".
+// Top of Atmosphere (TOA).
+wait until ship:altitude>ship:body:atm:height.
+print "TOA".
+
+// BECO.
+wait until ship:thrust=0.0.
+print "BECO".
+
+// Atmospheric entry
+wait until ship:altitude<ship:body:atm:height.
+print "Atmospheric entry".
+
+// Payload separation.
+print "Payload separation".
 stage.
 wait until stage:ready.
 

@@ -1,10 +1,10 @@
-// Name: Sputnik8K71PSV01Boot
+// Name: SomeLikeItHotV01Boot
 // Author: JitteryJet
 // Version: V01
 // kOS Version: 1.6.0.1
 // KSP Version: 1.12.5
 // Description:
-//    Boot script for the Sputnik 8K71PS launch vehicle.
+//    Boot script for the Some Like It Hot V01 launch vehicle.
 //
 // Assumptions:
 //    - 
@@ -17,7 +17,7 @@
 //    -
 //
 // Update History:
-//    28/06/2026 V01  - Created.
+//    02/07/2026 V01  - Created.
 //                    -
 //
 @lazyglobal off.
@@ -29,9 +29,9 @@ if ship:status = "PRELAUNCH"
     core:part:getmodule("kOSProcessor"):doevent("Open Terminal").
     runpath
       (
-        "archive:/KSP RP-1 kOS Firstplay/LaunchSputnik8K71PSV01 V01",
+        "archive:/KSP RP-1 kOS Firstplay/LaunchSomeLikeItHotV01 V01",
         90.0,
-        13.0,
-        75.0
+        2.5,
+        100.0
       ).
   }

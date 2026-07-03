@@ -14,11 +14,10 @@
 //    -
 //
 // Todo:
-//    - Finalise the script.
 //    -
 //
 // Update History:
-//    21/06/2026 V01  - Created. WIP
+//    03/07/2026 V01  - Created.
 //                    -
 //
 @lazyglobal off.
@@ -31,7 +30,7 @@ if ship:status = "PRELAUNCH"
     runpath
       (
         "archive:/KSP RP-1 kOS Firstplay/LaunchForScienceV01 V01",
-        0.0,
-        0.0
+        270.0,
+        15.0
       ).
   }
