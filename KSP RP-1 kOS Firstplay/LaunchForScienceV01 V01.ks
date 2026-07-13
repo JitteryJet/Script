@@ -41,7 +41,7 @@ parameter PitchOverAngle to 10.0.
 // Adjust the payload separation height to
 // increase the downrange distance slightly
 // if necessary.
-local PayloadSeparationHeight to 60E3.
+local PayloadSeparationHeight to 100E3.
 local FairingJettisonHeight to 100E3.
 sas off.
 rcs off.

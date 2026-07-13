@@ -1,10 +1,10 @@
-// Name: ForScienceV01Boot
+// Name: Sputnik8A91V01Boot
 // Author: JitteryJet
 // Version: V01
 // kOS Version: 1.6.0.1
 // KSP Version: 1.12.5
 // Description:
-//    Boot script for the For Science V01 sounding rocket.
+//    Boot script for the Sputnik 8A91 V01 satellite launch vehicle.
 //
 // Assumptions:
 //    - 
@@ -17,7 +17,7 @@
 //    -
 //
 // Update History:
-//    03/07/2026 V01  - Created.
+//    14/07/2026 V01  - Created.
 //                    -
 //
 @lazyglobal off.
@@ -29,8 +29,11 @@ if ship:status = "PRELAUNCH"
     core:part:getmodule("kOSProcessor"):doevent("Open Terminal").
     runpath
       (
-        "archive:/KSP RP-1 kOS Firstplay/LaunchForScienceV01 V01",
+        "archive:/KSP RP-1 kOS Firstplay/LaunchSputnik8A91V01 V01",
         90.0,
-        7.5
+        6,
+        81.0,
+        200.0,
+        0.0
       ).
   }

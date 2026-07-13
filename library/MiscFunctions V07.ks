@@ -1,7 +1,7 @@
 // Name: MiscFunctions
 // Author: JitteryJet
-// Version: V06
-// kOS Version: 1.4.0.0
+// Version: V07
+// kOS Version: 1.6.0.1
 // KSP Version: 1.12.5
 // Description:
 //    Miscellaneous Functions.
@@ -10,7 +10,7 @@
 //    - Only generic fully parameterised functions.
 //    -
 // Todo:
-//    -
+//    - Finalize version.
 //    -
 // Update History:
 //    24/07/2020 V01  - Created.
@@ -22,7 +22,10 @@
 //    26/04/2021 V04  - Added clamp function.
 //    30/04/2023 V05  - Remove name clash with the builtin function called "min".
 //                    - Add CalcCot function.
-//    13/07/2026 V06  - Added DoSafeWait function. 
+//    06/09/2024 V06  - Added DoSafeWait function. 
+//    14/07/2026 V07  - WIP
+//                    - Moved to library folder.
+//                    - Fixed up some comments.
 //                    -
 //
 @lazyglobal off.
@@ -147,7 +150,7 @@ global function CalcCot
     if WarpTypeCode = "RAILS"
       {
 // On-rails time warping only runs a limited game simulation,
-// the ship is unpacked, some system values become undefined etc.
+// the ship is packed, some system values become undefined etc.
 // The Player can also change the warp rate or stop the time warp completely.
 // The "wait until" tries to get the time warp and the kOS script back into
 // sync without issues.
