@@ -10,7 +10,6 @@
 //    - Only generic fully parameterised functions.
 //    -
 // Todo:
-//    - Finalize version.
 //    -
 // Update History:
 //    24/07/2020 V01  - Created.
