@@ -23,8 +23,7 @@
 //    30/04/2023 V05  - Remove name clash with the builtin function called "min".
 //                    - Add CalcCot function.
 //    06/09/2024 V06  - Added DoSafeWait function. 
-//    14/07/2026 V07  - WIP
-//                    - Moved to library folder.
+//    14/07/2026 V07  - Moved to library folder.
 //                    - Fixed up some comments.
 //                    -
 //
